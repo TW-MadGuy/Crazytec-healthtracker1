@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>血壓與心率統計系統</title>
+    <style>
+        body { font-family: sans-serif; padding: 15px; background: #f8f9fa; color: #333; margin: 0; }
+        .box { background: #fff; padding: 15px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .flex-container { display: flex; gap: 15px; margin-bottom: 15px; }
+        .flex-child { flex: 1; min-width: 280px; }
+        textarea { width: 100%; box-sizing: border-box; resize: vertical; }
+        button { padding: 8px 14px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        button:hover { opacity: 0.9; }
+        
+        .icon-btn { background: #f1f3f5; border: 1px solid #ced4da; border-radius: 4px; padding: 6px 10px; font-size: 16px; cursor: pointer; }
+        .icon-btn.active { background: #ffe7ba; border-color: #d46b08; box-shadow: 0 0 4px rgba(212,107,8,0.3); }
+        
+        @media (max-width: 768px) {
+            .flex-container { flex-direction: column; gap: 15px; }
+            input[type="date"], input[type="datetime-local"] { width: 100%; box-sizing: border-box; margin-bottom: 5px; }
+            .mobile-stack { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+            .mobile-stack button { width: 100%; }
+        }
+
+        .phone-tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            z-index: 9999;
+            pointer-events: none;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        .phone-tooltip::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 4px 4px 0;
+            border-style: solid;
+            border-color: rgba(0, 0, 0, 0.85) transparent;
+        }
+
+        /* 👇 新增的閃爍動畫 CSS */
+        @keyframes flashWarning {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        .blinking-text {
+            animation: flashWarning 1.2s infinite; 
+            font-weight: 900; 
+            font-size: 16px;  
+        }
+    </style>
+</head>
+<body>
+    <div style="text-align: center; margin-bottom: 25px; padding: 0 10px;">
+        <h2 style="color: #0056b3; margin: 0 auto 12px auto; display: inline-block; font-size: 24px;">
+            血壓與心率統計系統 V1.57a
+        </h2>
+        <br>
+        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 5px; flex-wrap: wrap;">
+            <span style="font-size: 14px; font-weight: bold; color: #495057; vertical-align: middle;">
+                研理系統科技關心您  📢 李德政貢獻版</br><br> 民國115年7月28日初版
+            </span>
+        </div>
+    </div>
+    
+    <div style="background-color: #e6f7ff; border: 1px solid #91d5ff; padding: 12px; margin-bottom: 20px; border-radius: 6px; font-size: 14px; color: #0050b3; line-height: 1.5; margin-left: auto; margin-right: auto; max-width: 940px; box-sizing: border-box;">
+        🔒 <strong>隱私安全宣告：</strong> 這些隱私的血壓數據只會安全地留在您自己的瀏覽器記憶體中，絕不會被上傳到網路上，請放心使用。
+    </div>
+
+    <!-- 👇 已經幫您替換為閃爍標籤的警告區塊 -->
+    <div style="background-color: #fff2e6; border: 1px solid #ffbb96; padding: 12px; margin-bottom: 20px; border-radius: 6px; font-size: 14px; color: #d4380d; line-height: 1.5; margin-left: auto; margin-right: auto; max-width: 940px; box-sizing: border-box;">
+        ⚠️ <span class="blinking-text">自動留存與備份重要提示：</span> 本系統已升級智慧記憶功能，您量測的數據會自動記憶在此手機瀏覽器中，方便您下次打開直接查看。但請注意：<strong>若您清除瀏覽器快取(Cache)、更換瀏覽器、或使用無痕模式，資料將會遺失！</strong> 商業與臨床數據無價，請務必定期點選下方按鈕「📥 儲存我的血壓紀錄」下載備份檔至手機保存，以確保數據永不丟失。
+    </div>
+    
+    <div style="background-color: #e9c0f0; border: 1px solid #91d5ff; padding: 12px; margin-bottom: 20px; border-radius: 6px; font-size: 14px; color: #0050b3; line-height: 1.5; margin-left: auto; margin-right: auto; max-width: 940px; box-sizing: border-box;">
+        ©️ <strong>版權宣告：</strong> 請尊重著作權,版權所有.禁止未經授權即摘錄、變更．轉載請標明出處．
+    </div>
+
+    <div class="box" style="max-width: 940px; margin-left: auto; margin-right: auto; box-sizing: border-box; background: #fffcf5; border: 1px solid #ffe7ba;">
+        <strong style="color: #d46b08;">📱 個人健康紀錄自我保存功能 (選填)</strong><br><br>
+        <div class="mobile-stack" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <button onclick="downloadBackupFile()" style="background: #27ae60; color: white;">📥 儲存我的血壓紀錄 (.txt)</button>
+            <span style="font-size:14px; font-weight:bold; color:#495057; margin-left: 10px;">📤 匯入我的血壓紀錄：</span>
+            <input type="file" id="fileChooser" accept=".txt" onchange="uploadBackupFile()" style="font-size:14px; cursor:pointer;">
+        </div>
+    </div>
+    
+    <div class="box" style="max-width: 940px; margin-left: auto; margin-right: auto; box-sizing: border-box;">
+        <strong>1. 設定統計圖表日期範圍（X軸）</strong> <span style="font-size:12px; color:#28a745;">(開始日期留空時，系統將在解析數據後自動抓取最早日期作為起點)</span><br><br>
+        開始日期：<input type="date" id="start" style="padding:4px;"> ｜ 
+        結束日期：<input type="date" id="end" style="padding:4px;"> 
+        <button onclick="draw()" style="margin-top: 5px; background: #007bff; color: white;">生成時間軸</button>
+    </div>
+
+    <div class="box" style="max-width: 940px; margin-left: auto; margin-right: auto; box-sizing: border-box;">
+        <strong>2. 自訂統計線顏色</strong><br><br>
+        收縮壓 <input type="color" id="c0" value="#dc3545"> ｜ 
+        舒張壓 <input type="color" id="c1" value="#6dc776"> ｜ 
+        心率 <input type="color" id="c2" value="#6f42c1"> 
+        <button onclick="draw()" style="margin-top: 5px; background: #6c757d; color: white;">套用顏色</button>
+    </div>
+
+    <div class="flex-container" style="max-width: 940px; margin-left: auto; margin-right: auto;">
+        <div class="box flex-child" style="margin-bottom: 0;">
+            <h3>3A. 快捷 CSV 貼上輸入</h3>
+            <textarea id="csv" rows="4" placeholder="CSV格式為:日期,24制時間,收縮壓,舒張壓,心跳值,15字備注
+例:7/28,16:55,179,120,89,💊服用xx藥物出現呼吸困難
+例:7/27,10:05,166,95,110,🧘‍♂️"></textarea><br>
+            <button onclick="pCSV()" style="margin-top:10px; background:#28a745; color:#fff; width: 100%;">解析並自動加入圖表</button>
+        </div>
+
+        <div class="box flex-child" style="margin-bottom: 0;">
+            <h3>3B. 傳統手動輸入</h3>
+            測量時間：<input type="datetime-local" id="mT" style="padding:4px;"><br><br>
+            收縮：<input type="number" id="mS" style="width:45px; padding:4px;"> 
+            舒張：<input type="number" id="mD" style="width:45px; padding:4px;"> 
+            心率：<input type="number" id="mP" style="width:45px; padding:4px;"><br><br>
+            
+            <div style="font-size: 14px; font-weight: bold; margin-bottom: 8px; color: #d46b08;">快捷狀態標籤 (選填，滑鼠移至上方可看說明)：</div>
+            <div id="iconGrid" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
+                <button type="button" class="icon-btn" title="例行服藥" onclick="selectIcon(this, '💊')">💊</button>
+                <button type="button" class="icon-btn" title="停藥/漏吃降壓藥" onclick="selectIcon(this, '⚠️')">⚠️</button>
+                <button type="button" class="icon-btn" title="極限/重訓/高強度運動" onclick="selectIcon(this, '🏋️‍♂️')">🏋️‍♂️</button>
+                <button type="button" class="icon-btn" title="散步/慢跑/輕量運動" onclick="selectIcon(this, '🚶‍♂️')">🚶‍♂️</button>
+                <button type="button" class="icon-btn" title="清淡植物性素食" onclick="selectIcon(this, '🥗')">🥗</button>
+                <button type="button" class="icon-btn" title="高蛋白/聚餐葷食" onclick="selectIcon(this, '🥩')">🥩</button>
+                <button type="button" class="icon-btn" title="168/24小時斷食期間" onclick="selectIcon(this, '⏳')">⏳</button>
+                <button type="button" class="icon-btn" title="茶/咖啡咖啡後" onclick="selectIcon(this, '☕')">☕</button>
+                <button type="button" class="icon-btn" title="抽菸行為後" onclick="selectIcon(this, '🚬')">🚬</button>
+                <button type="button" class="icon-btn" title="飲酒過後" onclick="selectIcon(this, '🍺')">🍺</button>
+                <button type="button" class="icon-btn" title="清晨剛起床(基礎血壓)" onclick="selectIcon(this, '😴')">😴</button>
+                <button type="button" class="icon-btn" title="臨睡前測量" onclick="selectIcon(this, '🛌')">🛌</button>
+                <button type="button" class="icon-btn" title="感冒生病/身體發炎不適" onclick="selectIcon(this, '🤒')">🤒</button>
+                <button type="button" class="icon-btn" title="情緒激動/壓力焦慮剛吵完架" onclick="selectIcon(this, '😡')">😡</button>
+                <button type="button" class="icon-btn" title="睡眠嚴重不足/熬夜失眠" onclick="selectIcon(this, '🥱')">🥱</button>
+                <button type="button" class="icon-btn" title="身心平靜/冥想靜坐完" onclick="selectIcon(this, '🧘‍♂️')">🧘‍♂️</button>
+                <button type="button" class="icon-btn" title="牙痛/頭痛/身體某處劇烈疼痛" onclick="selectIcon(this, '🦷')">🦷</button>
+                <button type="button" class="icon-btn" title="排便前後測量" onclick="selectIcon(this, '🚽')">🚽</button>
+                <button type="button" class="icon-btn" title="醫院/診所白袍測量" onclick="selectIcon(this, '🩺')">🩺</button>
+                <button type="button" class="icon-btn" title="開啟其他備註打字框" onclick="selectIcon(this, '📝')">📝</button>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="mNote" maxlength="15" style="width: 100%; padding: 6px; box-sizing: border-box;" placeholder="補充說明 (限15個字，手機選取標籤會在此自動導引)">
+            </div>
+
+            <div class="mobile-stack">
+                <button onclick="pMan()" style="background:#17a2b8; color:#fff;">新增單筆數據</button>
+                <button onclick="exportToCSV()" style="background:#6c757d; color:#fff;">將目前數據轉為 CSV 文字</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="box" style="max-width: 940px; margin-left: auto; margin-right: auto; box-sizing: border-box;">
+        <h3>【數值圖表】⬅️➡️</h3>
+        <div id="tip" style="background:#f1f3f5; padding:12px; text-align:center; font-weight:bold; margin-bottom:15px; border-left:5px solid #007bff; font-size:15px; line-height: 1.4;">💡 請先在下方貼入 CSV 數據或從手動輸入，圖表將自動適應範圍並自動生成時間軸</div>
+        
+        <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+            <canvas id="myCanvas" width="940" height="400" style="border:1px solid #eee; cursor:crosshair; background: #fff; min-width: 700px;"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let db = []; 
+        let hitPoints = []; 
+        let lastActivePoint = null; 
+        let chosenIcon = ""; 
+
+        (function() {
+            try {
+                const localData = localStorage.getItem('xx_blood_pressure_db');
+                if (localData) {
+                    const parsed = JSON.parse(localData);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        db = parsed.map(item => {
+                            item.rawDate = new Date(item.rawDate);
+                            return item;
+                        });
+                        let sortedDb = [...db].sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
+                        let lastData = sortedDb[sortedDb.length - 1];
+                        lastActivePoint = { label: `${lastData.dateStr} ${lastData.timeStr}`, sys: lastData.sys, dia: lastData.dia, pulse: lastData.pulse, note: lastData.note };
+                    }
+                }
+            } catch (e) {
+                console.error("自動讀取歷史紀錄時發生微幅異常:", e);
+            }
+        })();
+
+        window.addEventListener('load', function() {
+            if (db && db.length > 0) {
+                autoAdjustDates();
+                draw();
+                if (lastActivePoint) {
+                    document.getElementById('tip').innerHTML = `📅 讀取最後紀錄：<span style="color:#007bff">${lastActivePoint.label}</span> ｜ 🟥 收縮壓：<span style="color:#dc3545">${lastActivePoint.sys}</span> mmHg<br>${lastActivePoint.note ? '📝 備註：' + lastActivePoint.note : ''}`;
+                }
+            }
+        });
+
+        const now = new Date();
+        let pad = (n) => String(n).padStart(2, '0');
+        const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+        document.getElementById('start').value = ""; 
+        document.getElementById('end').value = todayStr; 
+
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('mT').value = now.toISOString().slice(0, 16);
+
+        function selectIcon(btnElement, iconSymbol) {
+            const allButtons = document.querySelectorAll('.icon-btn');
+            if (btnElement.classList.contains('active')) {
+                btnElement.classList.remove('active');
+                chosenIcon = ""; 
+            } else {
+                allButtons.forEach(b => b.classList.remove('active'));
+                btnElement.classList.add('active');
+                chosenIcon = iconSymbol; 
+            }
+        }
+
+        function downloadBackupFile() {
+            if (db.length === 0) { alert('目前網頁中沒有任何數據可以下載！'); return; }
+            let sortedDb = [...db].sort((a, b) => a.rawDate - b.rawDate);
+            let txtLines = sortedDb.map(p => `${p.dateStr},${p.timeStr},${p.sys},${p.dia},${p.pulse},${p.note}`);
+            let blob = new Blob([txtLines.join('\n')], { type: "text/plain;charset=utf-8" });
+            let a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "我的血壓紀錄.txt";
+            a.click();
+        }
+
+        function draw() {
+            const canvas = document.getElementById('myCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hitPoints = []; 
+
+            let sStr = document.getElementById('start').value;
+            let eStr = document.getElementById('end').value;
+            
+            if ((!sStr || !eStr) && db.length > 0) {
+                autoAdjustDates();
+                sStr = document.getElementById('start').value;
+                eStr = document.getElementById('end').value;
+            }
+
+            if (!sStr || !eStr) return;
+
+            const tStart = new Date(sStr + 'T00:00:00');
+            const tEnd = new Date(eStr + 'T23:59:59');
+            const totalMs = tEnd - tStart;
+            if (totalMs <= 0) return;
+
+            ctx.lineWidth = 1;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.font = '12px sans-serif';
+
+            let cur = new Date(tStart);
+            while (cur <= tEnd) {
+                const ratio = (cur - tStart) / totalMs;
+                const x = 60 + ratio * (canvas.width - 90);
+                ctx.strokeStyle = '#f0f0f0';
+                ctx.beginPath(); ctx.moveTo(x, 20); ctx.lineTo(x, 350); ctx.stroke(); 
+                ctx.fillStyle = '#666';
+                ctx.fillText(`${cur.getMonth() + 1}/${cur.getDate()}`, x, 355); 
+                cur.setDate(cur.getDate() + 1);
+            }
+
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            for (let yVal = 40; yVal <= 220; yVal += 20) {
+                const ratio = (yVal - 40) / (220 - 40);
+                const y = 350 - ratio * (350 - 20);
+                ctx.strokeStyle = '#e8e8e8';
+                ctx.beginPath(); ctx.moveTo(60, y); ctx.lineTo(canvas.width - 30, y); ctx.stroke(); 
+                ctx.fillStyle = '#666';
+                ctx.fillText(yVal, 50, y); 
+            }
+
+            let activeData = db.filter(p => p.rawDate >= tStart && p.rawDate <= tEnd);
+            activeData.sort((a, b) => { return a.rawDate.getTime() - b.rawDate.getTime(); });
+
+            const colors = [
+                document.getElementById('c0').value, 
+                document.getElementById('c1').value, 
+                document.getElementById('c2').value  
+            ];
+            const types = ['sys', 'dia', 'pulse'];
+
+            types.forEach((type, datasetIdx) => {
+                ctx.strokeStyle = colors[datasetIdx];
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                let first = true;
+                activeData.forEach(p => {
+                    const xRatio = (p.rawDate - tStart) / totalMs;
+                    const x = 60 + xRatio * (canvas.width - 90);
+                    const yRatio = (p[type] - 40) / (220 - 40);
+                    const y = 350 - yRatio * (350 - 20);
+
+                    if (first) { ctx.moveTo(x, y); first = false; } 
+                    else { ctx.lineTo(x, y); }
+
+                    let displayLabel = `${p.dateStr} ${p.timeStr}`;
+                    hitPoints.push({ x, y, label: displayLabel, sys: p.sys, dia: p.dia, pulse: p.pulse, color: colors[datasetIdx], type: type, note: p.note });
+                });
+                ctx.stroke();
+
+                ctx.fillStyle = colors[datasetIdx];
+                activeData.forEach(p => {
+                    const xRatio = (p.rawDate - tStart) / totalMs;
+                    const x = 60 + xRatio * (canvas.width - 90);
+                    const yRatio = (p[type] - 40) / (220 - 40);
+                    const y = 350 - yRatio * (350 - 20);
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, 3, 0, 2 * Math.PI); 
+                    ctx.fill();
+                });
+            });
+
+            if (lastActivePoint) {
+                hitPoints.forEach(pt => {
+                    if (pt.label === lastActivePoint.label) {
+                        ctx.strokeStyle = pt.color;
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.arc(pt.x, pt.y, 7, 0, 2 * Math.PI); 
+                        ctx.stroke();
+                        ctx.fillStyle = pt.color;
+                        ctx.beginPath();
+                        ctx.arc(pt.x, pt.y, 3, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+                });
+            }
+        }
+
+        function autoAdjustDates() {
+            if (db.length === 0) return;
+            let sortedDb = [...db].sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
+            let earliest = sortedDb[0].rawDate;
+            let latest = sortedDb[sortedDb.length - 1].rawDate;
+
+            let pad2 = (n) => String(n).padStart(2, '0');
+            let startFormatted = `${earliest.getFullYear()}-${pad2(earliest.getMonth() + 1)}-${pad2(earliest.getDate())}`;
+            let endFormatted = `${latest.getFullYear()}-${pad2(latest.getMonth() + 1)}-${pad2(latest.getDate())}`;
+
+            document.getElementById('start').value = startFormatted;
+            document.getElementById('end').value = endFormatted;
+        }
+
+        function uploadBackupFile() {
+            const fileChooser = document.getElementById('fileChooser');
+            if (!fileChooser.files || fileChooser.files.length === 0) return;
+            
+            const file = fileChooser.files[0]; 
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const txt = e.target.result.trim();
+                if (!txt) { alert('檔案內容為空！'); return; }
+                
+                db = []; 
+                lastActivePoint = null;
+                const curYear = new Date().getFullYear();
+                
+                txt.split('\n').forEach(ln => {
+                    if (!ln.trim()) return;
+                    const p = ln.split(',');
+                    if (p.length >= 5) {
+                        let datePart = p[0].trim();
+                        let timePart = p[1].trim();
+                        let sys = parseInt(p[2].trim());
+                        let dia = parseInt(p[3].trim());
+                        let pulse = parseInt(p[4].trim());
+                        let noteStr = p[5] ? p[5].trim() : "";
+                        
+                        if (!isNaN(sys) && !isNaN(dia) && !isNaN(pulse)) {
+                            const rawDate = new Date(`${curYear}/${datePart} ${timePart}`);
+                            if (!isNaN(rawDate.getTime())) {
+                                db.push({ rawDate, dateStr: datePart, timeStr: timePart, sys, dia, pulse, note: noteStr });
+                            }
+                        }
+                    }
+                });
+
+                if (db.length > 0) {
+                    saveToLocal保險箱(); 
+                    autoAdjustDates();
+                    let sortedDb = [...db].sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
+                    let lastData = sortedDb[sortedDb.length - 1];
+                    lastActivePoint = { label: `${lastData.dateStr} ${lastData.timeStr}`, sys: lastData.sys, dia: lastData.dia, pulse: lastData.pulse, note: lastData.note };
+                    
+                    draw();
+                    document.getElementById('tip').innerHTML = `📅 時間：<span style="color:#007bff">${lastActivePoint.label}</span> ｜ 🟥 收縮壓：<span style="color:#dc3545">${lastActivePoint.sys}</span> mmHg<br>${lastActivePoint.note ? '📝 備註：' + lastActivePoint.note : '💡 此資料點無備註說明。'}`;
+                    alert(`📂 成功自檔案匯入 ${db.length} 筆歷史紀錄！`);
+                } else {
+                    alert('未能識別檔案內符合標準格式的數據。');
+                }
+            };
+            reader.readAsText(file);
+            fileChooser.value = ''; 
+        }
+
+        document.getElementById('myCanvas').addEventListener('mousemove', function(e) {
+            const rect = this.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            let closest = null;
+            let minDist = 15; 
+
+            hitPoints.forEach(pt => {
+                const dist = Math.sqrt((pt.x - mouseX) ** 2 + (pt.y - mouseY) ** 2);
+                if (dist < minDist) { minDist = dist; closest = pt; }
+            });
+
+            if (closest && (!lastActivePoint || closest.label !== lastActivePoint.label)) {
+                lastActivePoint = closest;
+                draw(); 
+                document.getElementById('tip').innerHTML = 
+                    `📅 時間：<span style="color:#007bff">${closest.label}</span> ｜ 🟥 收縮壓：<span style="color:#dc3545">${closest.sys}</span> mmHg ｜ 🟨 舒張壓：<span style="color:#6dc776">${closest.dia}</span> mmHg ｜ 🟪 心率：<span style="color:#6f42c1">${closest.pulse}</span> bpm` +
+                    `<br>${closest.note ? '📝 狀態備註：<span style="color:#d46b08; font-weight:bold;">' + closest.note + '</span>' : '💡 此測量時間點無特殊備註。'}`;
+            }
+        });
+
+        function exportToCSV() {
+            if (db.length === 0) { alert('目前開網頁沒有任何數據可以導出！'); return; }
+            let sortedDb = [...db].sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
+            let csvLines = [];
+            sortedDb.forEach(p => {
+                csvLines.push(`${p.dateStr},${p.timeStr},${p.sys},${p.dia},${p.pulse},${p.note}`);
+            });
+            document.getElementById('csv').value = csvLines.join('\n');
+            document.getElementById('tip').innerHTML = `💾 數據已成功導出至下方的【3A 快捷 CSV 貼上輸入】框框中！已含備註日誌。`;
+            alert('數據已成功格式化並填入 3A 輸入框！');
+        }
+
+        function pCSV() {
+            const txt = document.getElementById('csv').value.trim();
+            if (!txt) { alert('請先輸入 CSV 資料！'); return; }
+
+            let count = 0;
+            const lines = txt.split('\n');
+            const curYear = new Date().getFullYear();
+
+            lines.forEach(ln => {
+                if (!ln.trim()) return;
+                const parts = ln.split(','); 
+                if (parts.length >= 5) {
+                    const datePart = parts[0].trim(); 
+                    const timePart = parts[1].trim(); 
+                    const sys = parseInt(parts[2].trim()); 
+                    const dia = parseInt(parts[3].trim()); 
+                    const pulse = parseInt(parts[4].trim());
+                    const noteStr = parts[5] ? parts[5].trim() : "";
+
+                    if (!isNaN(sys) && !isNaN(dia) && !isNaN(pulse)) {
+                        const rawDate = new Date(`${curYear}/${datePart} ${timePart}`);
+                        if (!isNaN(rawDate.getTime())) {
+                            db.push({ rawDate, dateStr: datePart, timeStr: timePart, sys, dia, pulse, note: noteStr });
+                            count++;
+                        }
+                    }
+                }
+            });
+
+            if (count > 0) {
+                saveToLocal保險箱(); 
+                autoAdjustDates(); 
+                if(db.length > 0) {
+                    let sortedDb = [...db].sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
+                    let lastData = sortedDb[sortedDb.length - 1];
+                    lastActivePoint = { label: `${lastData.dateStr} ${lastData.timeStr}`, sys: lastData.sys, dia: lastData.dia, pulse: lastData.pulse, note: lastData.note };
+                }
+                draw(); 
+                document.getElementById('tip').innerHTML = `📅 時間：<span style="color:#007bff">${lastActivePoint.label}</span> ｜ 🟥 收縮壓：<span style="color:#dc3545">${lastActivePoint.sys}</span> mmHg` + `<br>${lastActivePoint.note ? '📝 狀態備註：<span style="color:#d46b08; font-weight:bold;">' + lastActivePoint.note + '</span>' : '💡 資料已成功導入時間軸！'}`;
+            } else {
+                alert('未能識別符合格式的數據。');
+            }
+        }
+
+        function pMan() {
+            const dtStr = document.getElementById('mT').value;
+            const sys = parseInt(document.getElementById('mS').value);
+            const dia = parseInt(document.getElementById('mD').value);
+            const pulse = parseInt(document.getElementById('mP').value);
+            let customText = document.getElementById('mNote').value.trim();
+
+            if (!dtStr || isNaN(sys) || isNaN(dia) || isNaN(pulse)) { alert('請填寫完整生理數據！'); return; }
+
+            const rawDate = new Date(dtStr);
+            const dateStr = `${rawDate.getMonth() + 1}/${rawDate.getDate()}`;
+            const timeStr = `${String(rawDate.getHours()).padStart(2, '0')}:${String(rawDate.getMinutes()).padStart(2, '0')}`;
+            
+            let finalNote = "";
+            if (chosenIcon && customText) { finalNote = chosenIcon + " " + customText; } 
+            else if (chosenIcon) { finalNote = chosenIcon; } 
+            else if (customText) { finalNote = customText; }
+
+            db.push({ rawDate: rawDate, dateStr: dateStr, timeStr: timeStr, sys: sys, dia: dia, pulse: pulse, note: finalNote });
+            lastActivePoint = { label: `${dateStr} ${timeStr}`, sys: sys, dia: dia, pulse: pulse, note: finalNote };
+
+            saveToLocal保險箱(); 
+
+            autoAdjustDates(); 
+            draw(); 
+
+            document.getElementById('mS').value = '';
+            document.getElementById('mD').value = '';
+            document.getElementById('mP').value = '';
+            document.getElementById('mNote').value = '';
+            chosenIcon = "";
+            document.querySelectorAll('.icon-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById('tip').innerHTML = 
+                `📅 新增時間：<span style="color:#007bff">${lastActivePoint.label}</span> ｜ 🟥 收縮壓：<span style="color:#dc3545">${sys}</span> mmHg` +
+                `<br>${finalNote ? '📝 狀態備註：<span style="color:#d46b08; font-weight:bold;">' + finalNote + '</span>' : '💡 單筆數據已成功加入！'}`;
+            alert('單筆數據與健康日誌已成功加入！系統已自動創造並刷新對應的時間軸。');
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const iconButtons = document.querySelectorAll('.icon-btn');
+            let activeTooltip = null;
+
+            iconButtons.forEach(btn => {
+                btn.addEventListener('touchstart', function(e) {
+                    if (activeTooltip) { activeTooltip.remove(); }
+                    
+                    activeTooltip = document.createElement('div');
+                    activeTooltip.className = 'phone-tooltip';
+                    activeTooltip.innerText = btn.title; 
+                    document.body.appendChild(activeTooltip);
+                    
+                    const rect = btn.getBoundingClientRect();
+                    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+                    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                    
+                    activeTooltip.style.left = (rect.left + scrollLeft + (rect.width / 2) - (activeTooltip.offsetWidth / 2)) + 'px';
+                    activeTooltip.style.top = (rect.top + scrollTop - activeTooltip.offsetHeight - 8) + 'px';
+                });
+
+                btn.addEventListener('touchend', function() {
+                    if (activeTooltip) {
+                        activeTooltip.remove();
+                        activeTooltip = null;
+                    }
+                });
+
+                btn.addEventListener('touchcancel', function() {
+                    if (activeTooltip) {
+                        activeTooltip.remove();
+                        activeTooltip = null;
+                    }
+                });
+            });
+        });
+
+        function saveToLocal保險箱() {
+            try {
+                if (db && db.length >= 0) {
+                    localStorage.setItem('xx_blood_pressure_db', JSON.stringify(db));
+                }
+            } catch (e) {
+                console.error("智慧存檔至本地記憶體時發生微幅異常:", e);
+            }
+        }
+    </script>
+</body>
+</html>
