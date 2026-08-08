@@ -555,6 +555,11 @@
             let activeTooltip = null;
 
             iconButtons.forEach(btn => {
+
+		    btn.addEventListener('contextmenu', function(e) {
+                    e.preventDefault(); // 徹底封殺長按跳出的系統選單
+                });
+
                 btn.addEventListener('touchstart', function(e) {
                     if (activeTooltip) { activeTooltip.remove(); }
                     
