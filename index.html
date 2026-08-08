@@ -23,12 +23,13 @@
     
     		/* 👇 加上這幾行，阻擋手機預設的長按選取與複製選單 */
     		-webkit-touch-callout: none; /* 禁用 iOS 的長按快顯選單 */
-			-webkit-user-drag: none;     /* 新增：禁止系統把它當圖片拖曳下載 */
+            -webkit-user-drag: none;     /* 新增：禁止系統把它當圖片拖曳下載 */
     		-webkit-user-select: none;   /* 禁用 Webkit 核心 (Chrome/Safari) 的文字反白選取 */
     		-moz-user-select: none;      /* 禁用 Firefox 的文字選取 */
     		-ms-user-select: none;       /* 禁用 IE/Edge 的文字選取 */
     		user-select: none;           /* 標準語法 */
 		}
+
         .icon-btn.active { background: #ffe7ba; border-color: #d46b08; box-shadow: 0 0 4px rgba(212,107,8,0.3); }
         
         @media (max-width: 768px) {
@@ -76,15 +77,22 @@
     </style>
 </head>
 <body>
-    <div style="text-align: center; margin-bottom: 25px; padding: 0 10px;">
-        <h2 style="color: #0056b3; margin: 0 auto 12px auto; display: inline-block; font-size: 24px;">
-            血壓與心率統計系統 V1.58a 
+	<div style="text-align: center; margin-bottom: 20px; padding: 0 10px;">
+        <h2 style="color: #0056b3; margin: 0 auto 5px auto; display: inline-block; font-size: 24px;">
+            血壓與心率統計系統 V1.58a
         </h2>
-        <br>
-        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 5px; flex-wrap: wrap;">
-            <span style="font-size: 14px; font-weight: bold; color: #495057; vertical-align: middle;">
-                研理系統科技關心您  📢 李德政貢獻版</br><br> 民國115年7月28日初版/最新更新於115年8月8日
-            </span>
+		<!-- gap: 2px 控制極小間距 -->
+		<div style="display: flex; flex-direction: column; gap: 2px; align-items: center; margin-top: 0;">
+            
+            <!-- 第一行：公司名稱與貢獻版 (直接調 font-size 的數字即可) -->
+            <div style="font-size: 15px; font-weight: bold; color: #495057; line-height: 1.1; margin: 0;">
+                研理系統科技關心您 📢 李德政貢獻版
+            </div>
+            
+            <!-- 第二行：初版與更新日期 (直接調 font-size 的數字即可) -->
+            <div style="font-size: 12px; font-weight: bold; color: #6c757d; line-height: 1.1; margin: 0;">
+                民國115年7月28日初版，最新更新於115年8月8日
+            </div>
         </div>
     </div>
     
